@@ -4,47 +4,15 @@ genesis_block = {'last_hash': '', 'index': 0, 'transactions': []}
 blockchain = [genesis_block]
 open_transactions = []
 owner = 'Sean'
-
-# Utility functions
-
-
-def get_choice():
-    """ Get user input to know what action to perform."""
-    choice = input('')
-    return choice
+participants = {'Sean'}
+MINING_REWARD = 5
 
 
-def display_blockchain_by_block():
-    """ Display all blocks in order on screen."""
-    print("------------")
-    for idx, block in enumerate(blockchain):
-        print("Block " + str(idx) + ": " + str(block))
-        if idx < len(blockchain) - 1:
-            print("⬇")
-
-    print("------------")
-
-
-def get_user_transaction_input():
-    """ Get user input and return it as float."""
-    tx_recipient = input('Specify the recipient:')
-    tx_amount = float(input('Enter transaction amount: '))
-    return tx_recipient, tx_amount
-
-
-def output(value):
-    """ Display a formatted message in the terminal."""
-    print("------------")
-    print(value)
-    print("------------")
-
+# Blockchain functions
 
 def hash_block(block):
     """ Calculate a new hash based on the block"""
     return '-'.join([str(block[key]) for key in block])
-
-
-# Blockchain logic functions
 
 
 def get_last_blockchain_value():
@@ -62,15 +30,33 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: the previous transaction needed for the blockchain.
     """
     transaction = {'sender': sender, 'recipient': recipient, 'amount': amount}
-    open_transactions.append(transaction)
+
+    if verify_transaction(transaction):
+        open_transactions.append(transaction)
+    else:
+        return False
+
+    participants.add(sender)
+    participants.add(recipient)
 
 
 def mine_block():
     last_block = blockchain[-1]
     new_hash = hash_block(last_block)
+
     block = {'last_hash': new_hash, 'index': len(
         blockchain), 'transactions': open_transactions}
     blockchain.append(block)
+
+    # issue reward
+    reward_transaction = {
+        'sender': 'MINING',
+        'recipient': owner,
+        'amount': MINING_REWARD,
+    }
+    open_transactions.append(reward_transaction)
+
+    return True
 
 
 def verify_blockchain():
@@ -81,6 +67,68 @@ def verify_blockchain():
         if block['last_hash'] != hash_block(blockchain[idx - 1]):
             return False
     return True
+
+
+def verify_transaction(transaction):
+    """ Return True if transaction is valid."""
+    sender_balance = get_balance(transaction['sender'])
+    return sender_balance >= transaction['amount']
+
+# User functions
+
+
+def get_user_transaction_input():
+    """ Get user input and return it as float."""
+    tx_recipient = input('Specify the recipient:')
+    tx_amount = float(input('Enter transaction amount: '))
+    return tx_recipient, tx_amount
+
+
+def get_choice():
+    """ Get user input to know what action to perform."""
+    choice = input('')
+    return choice
+
+
+def get_balance(participant):
+    """Calculate the balance for one participant."""
+    # get total as sender
+    blocks_totals = [[transaction['amount'] for transaction in block['transactions']
+                     if transaction['sender'] == participant] for block in blockchain]
+    total_sent = 0
+    for block_totals in blocks_totals:
+        if len(block_totals) > 0:
+            total_sent += sum(block_totals)
+
+    # get total as recipient
+    blocks_totals = [[transaction['amount'] for transaction in block['transactions']
+                     if transaction['recipient'] == participant] for block in blockchain]
+    total_received = 0
+    for block_totals in blocks_totals:
+        if len(block_totals) > 0:
+            total_received += sum(block_totals)
+
+    return total_received - total_sent
+
+# Utility functions
+
+
+def display_blockchain_by_block():
+    """ Display all blocks in order on screen."""
+    print("------------")
+    for idx, block in enumerate(blockchain):
+        print("Block " + str(idx) + ": " + str(block))
+        if idx < len(blockchain) - 1:
+            print("⬇")
+
+    print("------------")
+
+
+def output(value):
+    """ Display a formatted message in the terminal."""
+    print("------------")
+    print(value)
+    print("------------")
 
 
 # main loop
@@ -97,10 +145,12 @@ while True:
         add_transaction(tx_recipient, amount=tx_amount)
     elif choice == '2':
         # mine block
-        mine_block()
+        if mine_block():
+            open_transactions = []
     elif choice == "0":
         # show the blockchain
         display_blockchain_by_block()
+        print("Your balance is now " + str(get_balance('Sean')))
     else:
         # invalid choice
         output("\"" + choice + "\" is an invalid choice.")
