@@ -1,4 +1,9 @@
-blockchain = [[1]]
+# global vars
+
+genesis_block = {'last_hash': '', 'index': 0, 'transactions': []}
+blockchain = [genesis_block]
+open_transactions = []
+owner = 'Sean'
 
 # Utility functions
 
@@ -22,8 +27,9 @@ def display_blockchain_by_block():
 
 def get_user_transaction_input():
     """ Get user input and return it as float."""
-    transaction_amount = float(input('Enter transaction amount: '))
-    return transaction_amount
+    tx_recipient = input('Specify the recipient:')
+    tx_amount = float(input('Enter transaction amount: '))
+    return tx_recipient, tx_amount
 
 
 def output(value):
@@ -31,6 +37,11 @@ def output(value):
     print("------------")
     print(value)
     print("------------")
+
+
+def hash_block(block):
+    """ Calculate a new hash based on the block"""
+    return '-'.join([str(block[key]) for key in block])
 
 
 # Blockchain logic functions
@@ -44,39 +55,50 @@ def get_last_blockchain_value():
         return blockchain[-1]
 
 
-def add_value(transaction_amount, last_transaction):
+def add_transaction(recipient, sender=owner, amount=1.0):
     """ Add a float value to the blockchain.
     Arguments:
-        :transaction_amount: the float value to be added.
-        :last_transaction: the previous transaction needed for the blockchain.
+        :sender: the float value to be added.
+        :recipient: the previous transaction needed for the blockchain.
     """
-    if last_transaction == None:
-        last_transaction = [1]
-    new_block = [last_transaction, transaction_amount]
-    blockchain.append(new_block)
-    output("Added " + str(new_block) + " to the blockchain.")
+    transaction = {'sender': sender, 'recipient': recipient, 'amount': amount}
+    open_transactions.append(transaction)
+
+
+def mine_block():
+    last_block = blockchain[-1]
+    new_hash = hash_block(last_block)
+    block = {'last_hash': new_hash, 'index': len(
+        blockchain), 'transactions': open_transactions}
+    blockchain.append(block)
 
 
 def verify_blockchain():
     """ Return True if all blocks are valid. A block is valid if its item 0 is identical to the previous block. """
     for idx, block in enumerate(blockchain):
-        if idx - 1 >= 0 and block[0] != blockchain[idx - 1]:
+        if idx == 0:
+            continue
+        if block['last_hash'] != hash_block(blockchain[idx - 1]):
             return False
     return True
 
 
 # main loop
-
 print("Your options:")
 while True:
     print("1 - add a transaction.")
-    print("2 - show the blockchain.")
+    print("2 - mine block.")
+    print("0 - show the blockchain.")
     choice = get_choice()
     if choice == "1":
         # add a transaction
-        transaction_amount = get_user_transaction_input()
-        add_value(transaction_amount, get_last_blockchain_value())
-    elif choice == "2":
+        tx_data = get_user_transaction_input()
+        tx_recipient, tx_amount = tx_data
+        add_transaction(tx_recipient, amount=tx_amount)
+    elif choice == '2':
+        # mine block
+        mine_block()
+    elif choice == "0":
         # show the blockchain
         display_blockchain_by_block()
     else:
