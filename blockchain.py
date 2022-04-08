@@ -30,7 +30,6 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: the previous transaction needed for the blockchain.
     """
     transaction = {'sender': sender, 'recipient': recipient, 'amount': amount}
-
     if verify_transaction(transaction):
         open_transactions.append(transaction)
     else:
@@ -38,15 +37,18 @@ def add_transaction(recipient, sender=owner, amount=1.0):
 
     participants.add(sender)
     participants.add(recipient)
+    return True
+
+
+def verify_transaction(transaction):
+    """ Return True if transaction is valid."""
+    sender_balance = get_balance(transaction['sender'])
+    return sender_balance >= transaction['amount']
 
 
 def mine_block():
     last_block = blockchain[-1]
     new_hash = hash_block(last_block)
-
-    block = {'last_hash': new_hash, 'index': len(
-        blockchain), 'transactions': open_transactions}
-    blockchain.append(block)
 
     # issue reward
     reward_transaction = {
@@ -54,7 +56,12 @@ def mine_block():
         'recipient': owner,
         'amount': MINING_REWARD,
     }
-    open_transactions.append(reward_transaction)
+    copied_txs = open_transactions[:]
+    copied_txs.append(reward_transaction)
+
+    block = {'last_hash': new_hash, 'index': len(
+        blockchain), 'transactions': copied_txs}
+    blockchain.append(block)
 
     return True
 
@@ -68,11 +75,6 @@ def verify_blockchain():
             return False
     return True
 
-
-def verify_transaction(transaction):
-    """ Return True if transaction is valid."""
-    sender_balance = get_balance(transaction['sender'])
-    return sender_balance >= transaction['amount']
 
 # User functions
 
@@ -95,6 +97,9 @@ def get_balance(participant):
     # get total as sender
     blocks_totals = [[transaction['amount'] for transaction in block['transactions']
                      if transaction['sender'] == participant] for block in blockchain]
+    open_totals = [transaction['amount']
+                   for transaction in open_transactions if transaction['sender'] == participant]
+    blocks_totals.append(open_totals)
     total_sent = 0
     for block_totals in blocks_totals:
         if len(block_totals) > 0:
@@ -142,7 +147,8 @@ while True:
         # add a transaction
         tx_data = get_user_transaction_input()
         tx_recipient, tx_amount = tx_data
-        add_transaction(tx_recipient, amount=tx_amount)
+        if not add_transaction(tx_recipient, amount=tx_amount):
+            print('Unable to add transaction.')
     elif choice == '2':
         # mine block
         if mine_block():
