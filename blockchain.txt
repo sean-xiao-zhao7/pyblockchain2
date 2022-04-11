@@ -1,0 +1,2 @@
+[{"last_hash": "", "index": 0, "transactions": [], "proof": 100}, {"last_hash": "48edc7fb57df1725b785b512656caad763ac4d86fb25a4c3910230e1a4238f35", "index": 1, "transactions": [{"sender": "MINING", "recipient": "Sean", "amount": 5}], "proof": 98}]
+[]
